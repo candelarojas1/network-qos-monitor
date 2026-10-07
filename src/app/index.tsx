@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { probeTcp } from '@/engine/tcp-probe';
 import { useNetworkStore } from '@/store/network-store';
+import type { CellularInfo } from '../../modules/telephony';
 
 const TYPE_LABELS: Record<string, string> = {
   wifi: 'WiFi',
@@ -16,9 +17,21 @@ const TYPE_LABELS: Record<string, string> = {
   unknown: 'Desconocida',
 };
 
+const PERMISSION_LABELS: Record<string, string> = {
+  granted: 'Concedido',
+  denied: 'Denegado',
+  undetermined: 'Sin decidir',
+};
+
 function yesNo(value: boolean | null) {
   if (value === null) return 'Sin dato';
   return value ? 'Sí' : 'No';
+}
+
+// Ej.: "5G (NRNSA)". Sin radio celular (simulador o sin SIM) no hay dato.
+function cellularLabel(info: CellularInfo | undefined) {
+  if (!info?.radioTech) return 'No disponible';
+  return info.generation ? `${info.generation} (${info.radioTech})` : info.radioTech;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -34,6 +47,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function MonitorScreen() {
   const network = useNetworkStore((s) => s.network);
+  const refreshCellular = useNetworkStore((s) => s.refreshCellular);
   const [permission, setPermission] = useState<Location.PermissionStatus | null>(null);
   const [probe, setProbe] = useState<string>('Sin medir');
 
@@ -57,12 +71,17 @@ export default function MonitorScreen() {
           <Row label="Tipo" value={network ? (TYPE_LABELS[network.type] ?? network.type) : 'Cargando...'} />
           <Row label="Conectado" value={yesNo(network?.isConnected ?? null)} />
           <Row label="Internet alcanzable" value={yesNo(network?.isInternetReachable ?? null)} />
-          {network?.type === 'cellular' && (
-            <Row label="Generación (NetInfo)" value={network.cellularGeneration ?? 'No disponible'} />
-          )}
+
+          <ThemedText type="smallBold">Red celular (módulo nativo)</ThemedText>
+          <Row label="Tecnología" value={cellularLabel(network?.cellular)} />
+          <Row label="Operador" value={network?.cellular.carrier ?? 'No disponible'} />
+          <Row label="Intensidad de señal" value="No disponible en iOS" />
+          <Pressable style={styles.secondaryButton} onPress={refreshCellular}>
+            <ThemedText type="smallBold">Actualizar red celular</ThemedText>
+          </Pressable>
 
           <ThemedText type="smallBold">Permisos</ThemedText>
-          <Row label="Ubicación" value={permission ?? 'Pidiendo...'} />
+          <Row label="Ubicación" value={permission ? PERMISSION_LABELS[permission] : 'Pidiendo...'} />
 
           <ThemedText type="smallBold">Prueba TCP (1.1.1.1:443)</ThemedText>
           <Row label="RTT" value={probe} />
@@ -100,4 +119,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   buttonText: { color: '#ffffff' },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#208AEF',
+    padding: Spacing.two,
+    borderRadius: Spacing.two,
+    alignItems: 'center',
+  },
 });
