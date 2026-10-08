@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals';
 import { qualityScore } from '../score';
 
 describe('qualityScore', () => {
