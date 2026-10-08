@@ -8,7 +8,9 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { pingHosts, PROBES_PER_HOST, type HostResult } from '@/engine/ping';
 import { CONNECT_TIMEOUT_MS } from '@/engine/tcp-probe';
+import { startSession, stopSession } from '@/engine/session';
 import { measureThroughput, warmUp, type ThroughputResult } from '@/engine/throughput';
+import { useSessionStore } from '@/store/session-store';
 import { useNetworkStore } from '@/store/network-store';
 import { MB, useSettingsStore } from '@/store/settings-store';
 import type { CellularInfo } from '../../modules/telephony';
@@ -57,6 +59,7 @@ export default function MonitorScreen() {
   const refreshCellular = useNetworkStore((s) => s.refreshCellular);
   const [permission, setPermission] = useState<Location.PermissionStatus | null>(null);
   const settings = useSettingsStore();
+  const session = useSessionStore();
   const [pinging, setPinging] = useState(false);
   const [pingResults, setPingResults] = useState<HostResult[]>([]);
   const [testingSpeed, setTestingSpeed] = useState(false);
@@ -96,6 +99,38 @@ export default function MonitorScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <ThemedText type="subtitle">Monitor</ThemedText>
+
+          <ThemedText type="smallBold">Sesión de medición</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Mide cada {settings.sessionIntervalSec} s (ping + GPS) y throughput cada {settings.throughputEvery} mediciones.
+          </ThemedText>
+          {session.sessionId !== null && (
+            <>
+              <Row label="Mediciones" value={`${session.count}${session.measuring ? ' (midiendo...)' : ''}`} />
+              {session.last && (
+                <>
+                  <Row label="Último puntaje" value={`${session.last.score} / 100`} />
+                  <Row label="Último RTT promedio" value={ms(session.last.rtt_avg)} />
+                  <Row
+                    label="Ubicación"
+                    value={
+                      session.last.lat === null
+                        ? 'Sin ubicación'
+                        : `${session.last.lat.toFixed(5)}, ${session.last.lng!.toFixed(5)}`
+                    }
+                  />
+                </>
+              )}
+            </>
+          )}
+          {session.error && <ThemedText type="small">Error: {session.error}</ThemedText>}
+          <Pressable
+            style={[styles.button, session.sessionId !== null && styles.stopButton]}
+            onPress={session.sessionId === null ? startSession : stopSession}>
+            <ThemedText type="smallBold" style={styles.buttonText}>
+              {session.sessionId === null ? 'Iniciar sesión' : 'Detener sesión'}
+            </ThemedText>
+          </Pressable>
 
           <ThemedText type="smallBold">Red activa</ThemedText>
           <Row label="Tipo" value={network ? (TYPE_LABELS[network.type] ?? network.type) : 'Cargando...'} />
@@ -184,6 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.two,
   },
+  stopButton: { backgroundColor: '#D93025' },
   buttonText: { color: '#ffffff' },
   secondaryButton: {
     borderWidth: 1,

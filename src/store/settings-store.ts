@@ -10,6 +10,8 @@ export type Settings = {
   uploadMB: number;
   // En una sesión, el test de throughput corre cada N mediciones para no gastar datos móviles.
   throughputEvery: number;
+  // Segundos entre el fin de una medición y el inicio de la siguiente, durante una sesión.
+  sessionIntervalSec: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   downloadMB: 2,
   uploadMB: 1,
   throughputEvery: 5,
+  sessionIntervalSec: 30,
 };
 
 type SettingsStore = Settings & {

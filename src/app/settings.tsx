@@ -14,6 +14,7 @@ type Draft = {
   downloadMB: string;
   uploadMB: string;
   throughputEvery: string;
+  sessionIntervalSec: string;
 };
 
 function toDraft(s: Settings): Draft {
@@ -23,6 +24,7 @@ function toDraft(s: Settings): Draft {
     downloadMB: String(s.downloadMB),
     uploadMB: String(s.uploadMB),
     throughputEvery: String(s.throughputEvery),
+    sessionIntervalSec: String(s.sessionIntervalSec),
   };
 }
 
@@ -35,6 +37,8 @@ function validate(d: Draft): string | null {
   if (!(down > 0 && down <= 50) || !(up > 0 && up <= 50)) return 'Los payloads deben estar entre 0 y 50 MB.';
   const every = Number(d.throughputEvery);
   if (!Number.isInteger(every) || every < 1) return '"Throughput cada N mediciones" debe ser un entero mayor o igual a 1.';
+  const interval = Number(d.sessionIntervalSec);
+  if (!Number.isInteger(interval) || interval < 10) return 'El intervalo de sesión debe ser un entero de 10 segundos o más.';
   return null;
 }
 
@@ -61,6 +65,7 @@ export default function SettingsScreen() {
       downloadMB: Number(draft.downloadMB),
       uploadMB: Number(draft.uploadMB),
       throughputEvery: Number(draft.throughputEvery),
+      sessionIntervalSec: Number(draft.sessionIntervalSec),
     });
     setMessage('Guardado.');
   };
@@ -100,7 +105,11 @@ export default function SettingsScreen() {
           {field('URL del backend', draft.backendUrl, (v) => setDraft({ ...draft, backendUrl: v }))}
           {field('Payload de bajada (MB)', draft.downloadMB, (v) => setDraft({ ...draft, downloadMB: v }), true)}
           {field('Payload de subida (MB)', draft.uploadMB, (v) => setDraft({ ...draft, uploadMB: v }), true)}
-          {field('Throughput cada N mediciones (sesión)', draft.throughputEvery, (v) =>
+
+          <ThemedText type="smallBold">Sesión</ThemedText>
+          {field('Segundos entre mediciones', draft.sessionIntervalSec, (v) =>
+            setDraft({ ...draft, sessionIntervalSec: v }), true)}
+          {field('Throughput cada N mediciones', draft.throughputEvery, (v) =>
             setDraft({ ...draft, throughputEvery: v }), true)}
 
           {message && <ThemedText type="small">{message}</ThemedText>}
