@@ -103,7 +103,7 @@ export async function takeMeasurement({ sessionId, source, withThroughput }: Mea
     fail_pct: agg.failPct,
     down_mbps: downMbps,
     up_mbps: upMbps,
-    score: qualityScore({ rttAvg: agg.rttAvg, jitter: agg.jitter, failPct: agg.failPct, downMbps }),
+    score: qualityScore({ rttAvg: agg.rttAvg, jitter: agg.jitter, failPct: agg.failPct }),
     source,
   };
   await insertMeasurement(m);
