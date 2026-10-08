@@ -5,6 +5,7 @@ export default function HistoryLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Historial' }} />
       <Stack.Screen name="[id]" options={{ title: 'Sesión' }} />
+      <Stack.Screen name="background" options={{ title: 'En segundo plano' }} />
     </Stack>
   );
 }

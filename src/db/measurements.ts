@@ -92,3 +92,11 @@ export async function countUnmappedMeasurements(): Promise<number> {
   );
   return row?.n ?? 0;
 }
+
+// Mediciones de la tarea en segundo plano (no pertenecen a ninguna sesión), las más nuevas primero.
+export async function listBackgroundMeasurements(): Promise<Measurement[]> {
+  const db = await getDb();
+  return db.getAllAsync<Measurement>(
+    "SELECT * FROM measurements WHERE source = 'background' ORDER BY ts DESC",
+  );
+}

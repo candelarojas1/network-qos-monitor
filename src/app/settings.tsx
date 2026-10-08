@@ -43,15 +43,14 @@ function validate(d: Draft): string | null {
   return null;
 }
 
-// Solo en desarrollo: ejecuta ahora la tarea registrada en BGTaskScheduler.
+// Solo en desarrollo: le pide a BGTaskScheduler que lance ya la tarea registrada.
+// La función nativa no devuelve resultado: la evidencia es la medición nueva de segundo plano.
 // Prueba que el código de la tarea funciona (mide, guarda, notifica);
 // NO demuestra que iOS la ejecute periódicamente.
 async function forceBackgroundTask(): Promise<string> {
   try {
-    const ok = await BackgroundTask.triggerTaskWorkerForTestingAsync();
-    return ok
-      ? 'Tarea ejecutada. Revisá el Historial (mediciones de segundo plano).'
-      : 'iOS no ejecutó la tarea (en el simulador BGTaskScheduler no está disponible).';
+    await BackgroundTask.triggerTaskWorkerForTestingAsync();
+    return 'Se pidió a iOS ejecutar la tarea. En unos segundos debería aparecer una medición de segundo plano (en el simulador BGTaskScheduler no está disponible).';
   } catch (e) {
     return `No se pudo forzar la tarea: ${e instanceof Error ? e.message : String(e)}`;
   }

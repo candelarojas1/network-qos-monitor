@@ -25,6 +25,18 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.content}
         data={sessions}
         keyExtractor={(s) => String(s.id)}
+        ListHeaderComponent={
+          <Link href="/history/background" asChild>
+            <Pressable>
+              <ThemedView type="backgroundElement" style={styles.card}>
+                <ThemedText type="smallBold">Mediciones en segundo plano</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Las que ejecutó iOS fuera de una sesión, con su hora.
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+          </Link>
+        }
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary">
             Todavía no hay sesiones. Iniciá una desde la pestaña Monitor.
