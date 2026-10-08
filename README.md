@@ -12,7 +12,7 @@ App iOS (React Native + Expo) que mide la calidad de la red del dispositivo, gua
 ## Cómo correrla
 
 ```bash
-git clone <url-del-repo> network-qos-monitor
+git clone https://github.com/candelarojas1/network-qos-monitor.git
 cd network-qos-monitor
 npm install
 npm run ios
