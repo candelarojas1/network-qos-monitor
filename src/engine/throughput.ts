@@ -33,6 +33,23 @@ export async function warmUp(baseUrl: string): Promise<void> {
   throw new Error('el servidor no respondió en 90 s. Revisá la URL del backend en Ajustes.');
 }
 
+// Límite por transferencia: si se pasa, se cancela y se informa el error en vez de quedar esperando.
+const TRANSFER_TIMEOUT_MS = 60_000;
+
+// Corre una transferencia con un AbortSignal que se cancela al vencer el límite.
+async function withTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TRANSFER_TIMEOUT_MS);
+  try {
+    return await run(controller.signal);
+  } catch (e) {
+    if (controller.signal.aborted) throw new Error(`la ${label} no terminó en ${TRANSFER_TIMEOUT_MS / 1000} s`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Bajada y subida de archivos con expo-file-system: los bytes van de la red al disco
 // del lado nativo y no pasan por el hilo de JavaScript.
 export async function measureThroughput(
@@ -42,7 +59,9 @@ export async function measureThroughput(
 ): Promise<ThroughputResult> {
   const downFile = new File(Paths.cache, 'qos-download.bin');
   let start = performance.now();
-  await File.downloadFileAsync(`${baseUrl}/download?size=${downBytes}`, downFile, { idempotent: true });
+  await withTimeout('bajada', (signal) =>
+    File.downloadFileAsync(`${baseUrl}/download?size=${downBytes}`, downFile, { idempotent: true, signal }),
+  );
   const downMs = performance.now() - start;
   const received = downFile.size;
 
@@ -50,13 +69,21 @@ export async function measureThroughput(
   // Queda en caché y solo se vuelve a bajar si cambia el tamaño configurado.
   const upFile = new File(Paths.cache, 'qos-upload.bin');
   if (!upFile.exists || upFile.size !== upBytes) {
-    await File.downloadFileAsync(`${baseUrl}/download?size=${upBytes}`, upFile, { idempotent: true });
+    await withTimeout('preparación de la subida', (signal) =>
+      File.downloadFileAsync(`${baseUrl}/download?size=${upBytes}`, upFile, { idempotent: true, signal }),
+    );
   }
 
   start = performance.now();
-  const res = await upFile.upload(`${baseUrl}/upload`, {
-    headers: { 'Content-Type': 'application/octet-stream' },
-  });
+  // Sesión "foreground": la subida la hace la app. Con la sesión "background" (la opción por
+  // defecto en iOS) la maneja un proceso del sistema que puede demorarla, sobre todo con datos móviles.
+  const res = await withTimeout('subida', (signal) =>
+    upFile.upload(`${baseUrl}/upload`, {
+      headers: { 'Content-Type': 'application/octet-stream' },
+      sessionType: 'foreground',
+      signal,
+    }),
+  );
   const upMs = performance.now() - start;
   if (res.status !== 200) throw new Error(`la subida falló (HTTP ${res.status})`);
   const sent = JSON.parse(res.body).bytes as number;
