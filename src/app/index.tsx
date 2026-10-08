@@ -78,6 +78,10 @@ export default function MonitorScreen() {
 
   const runSpeed = async () => {
     setSpeed(null);
+    if (network?.isConnected === false) {
+      setSpeedStatus('Error: sin conexión a internet.');
+      return;
+    }
     setTestingSpeed(true);
     try {
       setSpeedStatus('Despertando servidor...');
@@ -151,6 +155,12 @@ export default function MonitorScreen() {
 
           <ThemedText type="smallBold">Permisos</ThemedText>
           <Row label="Ubicación" value={permission ? PERMISSION_LABELS[permission] : 'Pidiendo...'} />
+          {permission === 'denied' && (
+            <ThemedText type="small" themeColor="textSecondary">
+              Sin permiso de ubicación las mediciones se guardan sin coordenadas y no aparecen en el mapa. Se
+              activa en Ajustes de iOS &gt; Network QoS Monitor &gt; Ubicación.
+            </ThemedText>
+          )}
 
           <ThemedText type="smallBold">Latencia (TCP al puerto 443)</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

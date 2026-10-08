@@ -30,7 +30,7 @@ export async function warmUp(baseUrl: string): Promise<void> {
     }
     await new Promise((r) => setTimeout(r, WARMUP_RETRY_MS));
   }
-  throw new Error('El servidor no respondió a tiempo');
+  throw new Error('el servidor no respondió en 90 s. Revisá la URL del backend en Ajustes.');
 }
 
 // Bajada y subida de archivos con expo-file-system: los bytes van de la red al disco
@@ -58,7 +58,7 @@ export async function measureThroughput(
     headers: { 'Content-Type': 'application/octet-stream' },
   });
   const upMs = performance.now() - start;
-  if (res.status !== 200) throw new Error(`Subida falló (HTTP ${res.status})`);
+  if (res.status !== 200) throw new Error(`la subida falló (HTTP ${res.status})`);
   const sent = JSON.parse(res.body).bytes as number;
 
   return {
