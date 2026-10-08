@@ -39,7 +39,7 @@ npm install
 
 ```bash
 npm run ios                     # genera ios/, instala pods, compila y abre el simulador
-cd backend && npm install && npm start   # backend local en http://127.0.0.1:3000
+cd backend && npm install && npm start   # backend local en http://127.0.0.1:3000 (cambiar la URL en Ajustes)
 ```
 
 **iPhone (desarrollo, necesita Metro y el mismo WiFi):**
@@ -56,7 +56,6 @@ npx expo run:ios --device <UDID>
    npx expo run:ios --device <UDID> --configuration Release
    ```
 3. En el iPhone: Ajustes > General > VPN y gestión de dispositivos > confiar en el certificado.
-4. En la app: Ajustes > URL del backend = `https://network-qos-monitor.onrender.com`.
 
 Con un Apple ID gratis la app vence a los 7 días; se reinstala con el mismo comando. El `<UDID>` se obtiene con `xcrun xctrace list devices`.
 
@@ -68,7 +67,7 @@ Con un Apple ID gratis la app vence a los 7 días; se reinstala con el mismo com
    xcrun simctl install booted NetworkQoSMonitor.app
    xcrun simctl launch booted com.candelarojas.networkqosmonitor
    ```
-3. En la app: Ajustes > URL del backend = `https://network-qos-monitor.onrender.com`, o correr el backend local.
+3. La app usa por defecto el backend de Render (`https://network-qos-monitor.onrender.com`). Para usar el backend local, cambiar la URL en Ajustes.
 
 **Tests:**
 

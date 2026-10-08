@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type Settings = {
   hosts: [string, string, string];
-  // Simulador: http://127.0.0.1:3000. iPhone: la URL de Render (o la IP de la Mac en el mismo WiFi).
+  // Por defecto el backend desplegado en Render. Para desarrollo local: http://127.0.0.1:3000 (simulador).
   backendUrl: string;
   downloadMB: number;
   uploadMB: number;
@@ -16,7 +16,7 @@ export type Settings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   hosts: ['1.1.1.1', '8.8.8.8', '9.9.9.9'],
-  backendUrl: 'http://127.0.0.1:3000',
+  backendUrl: 'https://network-qos-monitor.onrender.com',
   downloadMB: 2,
   uploadMB: 1,
   throughputEvery: 5,
