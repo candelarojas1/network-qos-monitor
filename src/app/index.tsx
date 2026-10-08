@@ -6,8 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
-import { probeTcp } from '@/engine/tcp-probe';
+import { pingHosts, PROBES_PER_HOST, type HostResult } from '@/engine/ping';
+import { CONNECT_TIMEOUT_MS } from '@/engine/tcp-probe';
+import { measureThroughput, warmUp, type ThroughputResult } from '@/engine/throughput';
 import { useNetworkStore } from '@/store/network-store';
+import { MB, useSettingsStore } from '@/store/settings-store';
 import type { CellularInfo } from '../../modules/telephony';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -34,6 +37,10 @@ function cellularLabel(info: CellularInfo | undefined) {
   return info.generation ? `${info.generation} (${info.radioTech})` : info.radioTech;
 }
 
+function ms(value: number | null) {
+  return value === null ? '-' : `${value.toFixed(1)} ms`;
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <ThemedView type="backgroundElement" style={styles.row}>
@@ -49,16 +56,39 @@ export default function MonitorScreen() {
   const network = useNetworkStore((s) => s.network);
   const refreshCellular = useNetworkStore((s) => s.refreshCellular);
   const [permission, setPermission] = useState<Location.PermissionStatus | null>(null);
-  const [probe, setProbe] = useState<string>('Sin medir');
+  const settings = useSettingsStore();
+  const [pinging, setPinging] = useState(false);
+  const [pingResults, setPingResults] = useState<HostResult[]>([]);
+  const [testingSpeed, setTestingSpeed] = useState(false);
+  const [speedStatus, setSpeedStatus] = useState<string | null>(null);
+  const [speed, setSpeed] = useState<ThroughputResult | null>(null);
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync().then((res) => setPermission(res.status));
   }, []);
 
-  const runProbe = async () => {
-    setProbe('Midiendo...');
-    const rtt = await probeTcp('1.1.1.1');
-    setProbe(rtt === null ? 'Falló (timeout o error)' : `${rtt.toFixed(1)} ms`);
+  const runPing = async () => {
+    setPinging(true);
+    setPingResults(await pingHosts(settings.hosts));
+    setPinging(false);
+  };
+
+  const runSpeed = async () => {
+    setSpeed(null);
+    setTestingSpeed(true);
+    try {
+      setSpeedStatus('Despertando servidor...');
+      await warmUp(settings.backendUrl);
+      setSpeedStatus('Midiendo bajada y subida...');
+      setSpeed(
+        await measureThroughput(settings.backendUrl, settings.downloadMB * MB, settings.uploadMB * MB),
+      );
+      setSpeedStatus(null);
+    } catch (e) {
+      setSpeedStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTestingSpeed(false);
+    }
   };
 
   return (
@@ -83,11 +113,42 @@ export default function MonitorScreen() {
           <ThemedText type="smallBold">Permisos</ThemedText>
           <Row label="Ubicación" value={permission ? PERMISSION_LABELS[permission] : 'Pidiendo...'} />
 
-          <ThemedText type="smallBold">Prueba TCP (1.1.1.1:443)</ThemedText>
-          <Row label="RTT" value={probe} />
-          <Pressable style={styles.button} onPress={runProbe}>
+          <ThemedText type="smallBold">Latencia (TCP al puerto 443)</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {PROBES_PER_HOST} sondas por host, timeout {CONNECT_TIMEOUT_MS} ms.
+          </ThemedText>
+          {pingResults.map(({ host, stats }) => (
+            <ThemedView key={host} type="backgroundElement" style={styles.card}>
+              <ThemedText type="smallBold">{host}</ThemedText>
+              <ThemedText type="small">
+                min {ms(stats.min)} / avg {ms(stats.avg)} / max {ms(stats.max)}
+              </ThemedText>
+              <ThemedText type="small">Jitter {ms(stats.jitter)}</ThemedText>
+              <ThemedText type="small">
+                Fallos de conexión TCP (estimación de pérdida): {stats.failPct.toFixed(0)} %
+              </ThemedText>
+            </ThemedView>
+          ))}
+          <Pressable style={styles.button} onPress={runPing} disabled={pinging}>
             <ThemedText type="smallBold" style={styles.buttonText}>
-              Probar conexión TCP
+              {pinging ? 'Midiendo...' : 'Medir latencia'}
+            </ThemedText>
+          </Pressable>
+
+          <ThemedText type="smallBold">Throughput</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Bajada {settings.downloadMB} MB, subida {settings.uploadMB} MB contra {settings.backendUrl}
+          </ThemedText>
+          {speed && (
+            <>
+              <Row label="Bajada" value={`${speed.downMbps.toFixed(2)} Mbps`} />
+              <Row label="Subida" value={`${speed.upMbps.toFixed(2)} Mbps`} />
+            </>
+          )}
+          {speedStatus && <ThemedText type="small">{speedStatus}</ThemedText>}
+          <Pressable style={styles.button} onPress={runSpeed} disabled={testingSpeed}>
+            <ThemedText type="smallBold" style={styles.buttonText}>
+              {testingSpeed ? 'Midiendo...' : 'Test de velocidad'}
             </ThemedText>
           </Pressable>
         </ScrollView>
@@ -110,6 +171,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.two,
+  },
+  card: {
+    padding: Spacing.three,
+    borderRadius: Spacing.two,
+    gap: Spacing.half,
   },
   button: {
     backgroundColor: '#208AEF',

@@ -1,0 +1,38 @@
+import Storage from 'expo-sqlite/kv-store';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+
+export type Settings = {
+  hosts: [string, string, string];
+  // Simulador: http://127.0.0.1:3000. iPhone: la URL de Render (o la IP de la Mac en el mismo WiFi).
+  backendUrl: string;
+  downloadMB: number;
+  uploadMB: number;
+  // En una sesión, el test de throughput corre cada N mediciones para no gastar datos móviles.
+  throughputEvery: number;
+};
+
+export const DEFAULT_SETTINGS: Settings = {
+  hosts: ['1.1.1.1', '8.8.8.8', '9.9.9.9'],
+  backendUrl: 'http://127.0.0.1:3000',
+  downloadMB: 2,
+  uploadMB: 1,
+  throughputEvery: 5,
+};
+
+type SettingsStore = Settings & {
+  update: (patch: Partial<Settings>) => void;
+};
+
+// Se guarda en SQLite (kv-store) para que sobreviva al cierre de la app.
+export const useSettingsStore = create<SettingsStore>()(
+  persist(
+    (set) => ({
+      ...DEFAULT_SETTINGS,
+      update: (patch) => set(patch),
+    }),
+    { name: 'settings', storage: createJSONStorage(() => Storage) },
+  ),
+);
+
+export const MB = 1024 * 1024;
