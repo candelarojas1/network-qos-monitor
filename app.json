@@ -51,7 +51,8 @@
         }
       ],
       "expo-sqlite",
-      "expo-background-task"
+      "expo-background-task",
+      "./plugins/with-no-push-entitlement"
     ],
     "experiments": {
       "typedRoutes": true,
