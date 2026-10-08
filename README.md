@@ -60,6 +60,16 @@ npx expo run:ios --device <UDID>
 
 Con un Apple ID gratis la app vence a los 7 días; se reinstala con el mismo comando. El `<UDID>` se obtiene con `xcrun xctrace list devices`.
 
+**Build de simulador ya compilado (sin Xcode ni Metro):**
+
+1. Descargar `NetworkQoSMonitor-simulator.zip` desde la sección Releases del repositorio y descomprimirlo.
+2. Con un simulador de iPhone abierto:
+   ```bash
+   xcrun simctl install booted NetworkQoSMonitor.app
+   xcrun simctl launch booted com.candelarojas.networkqosmonitor
+   ```
+3. En la app: Ajustes > URL del backend = `https://network-qos-monitor.onrender.com`, o correr el backend local.
+
 **Tests:**
 
 ```bash
