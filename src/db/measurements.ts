@@ -76,3 +76,19 @@ export async function listSessionMeasurements(sessionId: number): Promise<Measur
     sessionId,
   );
 }
+
+// Mediciones con coordenadas, para el mapa. Las que no tienen ubicación no se dibujan.
+export async function listMappedMeasurements(): Promise<Measurement[]> {
+  const db = await getDb();
+  return db.getAllAsync<Measurement>(
+    'SELECT * FROM measurements WHERE lat IS NOT NULL AND lng IS NOT NULL ORDER BY ts ASC',
+  );
+}
+
+export async function countUnmappedMeasurements(): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ n: number }>(
+    'SELECT COUNT(*) AS n FROM measurements WHERE lat IS NULL OR lng IS NULL',
+  );
+  return row?.n ?? 0;
+}
