@@ -1,0 +1,13 @@
+{
+  "name": "network-qos-backend",
+  "version": "1.0.0",
+  "description": "Reference backend for the throughput test",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
