@@ -107,6 +107,10 @@ export default function MonitorScreen() {
           {session.sessionId !== null && (
             <>
               <Row label="Mediciones" value={`${session.count}${session.measuring ? ' (midiendo...)' : ''}`} />
+              <Row
+                label="Con pantalla bloqueada"
+                value={session.background ? 'Sigue midiendo' : 'Se pausa (sin ubicación)'}
+              />
               {session.last && (
                 <>
                   <Row label="Último puntaje" value={`${session.last.score} / 100`} />

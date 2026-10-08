@@ -2,13 +2,15 @@ import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 
 import Telephony from '../../modules/telephony';
+import { checkDegradation } from '@/background/degradation';
 import {
   insertMeasurement,
   type LocationSource,
   type MeasurementSource,
   type NewMeasurement,
 } from '@/db/measurements';
-import { MB, useSettingsStore } from '@/store/settings-store';
+import { getRecentFix } from '@/geo/location-updates';
+import { MB, loadSettings } from '@/store/settings-store';
 import { pingHosts, type HostResult } from './ping';
 import { qualityScore } from './score';
 import { measureThroughput, warmUp } from './throughput';
@@ -33,16 +35,22 @@ export function aggregateHosts(results: HostResult[]) {
 
 type Position = { lat: number | null; lng: number | null; source: LocationSource };
 
-// GPS actual; si falla o tarda, la última ubicación conocida; si no hay, coordenadas vacías.
-export async function getPosition(): Promise<Position> {
-  try {
-    const pos = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-      new Promise<null>((r) => setTimeout(() => r(null), 10_000)),
-    ]);
-    if (pos) return { lat: pos.coords.latitude, lng: pos.coords.longitude, source: 'gps' };
-  } catch {
-    // sin permiso o sin señal GPS: se intenta con la última conocida
+// "current": posición de la sesión o GPS actual, con respaldo en la última conocida.
+// "last_known": solo la última conocida (tarea en segundo plano, donde no se pide GPS nuevo).
+export async function getPosition(mode: 'current' | 'last_known'): Promise<Position> {
+  if (mode === 'current') {
+    // Durante una sesión, la tarea de ubicación ya tiene una posición fresca.
+    const fix = getRecentFix(15_000);
+    if (fix) return { lat: fix.lat, lng: fix.lng, source: 'gps' };
+    try {
+      const pos = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<null>((r) => setTimeout(() => r(null), 10_000)),
+      ]);
+      if (pos) return { lat: pos.coords.latitude, lng: pos.coords.longitude, source: 'gps' };
+    } catch {
+      // sin permiso o sin señal GPS: se intenta con la última conocida
+    }
   }
   try {
     const last = await Location.getLastKnownPositionAsync();
@@ -62,12 +70,13 @@ type MeasureOptions = {
 // Una medición completa. Ping y GPS corren en paralelo; el throughput va después
 // para que no compita con las sondas de latencia.
 export async function takeMeasurement({ sessionId, source, withThroughput }: MeasureOptions): Promise<NewMeasurement> {
-  const settings = useSettingsStore.getState();
+  // En un arranque en segundo plano los ajustes todavía no se leyeron de SQLite.
+  const settings = await loadSettings();
   const ts = Date.now();
 
   const [net, pos, hostResults] = await Promise.all([
     NetInfo.fetch(),
-    getPosition(),
+    getPosition(source === 'background' ? 'last_known' : 'current'),
     pingHosts(settings.hosts),
   ]);
   const cellular = Telephony.getCellularInfo();
@@ -107,5 +116,7 @@ export async function takeMeasurement({ sessionId, source, withThroughput }: Mea
     source,
   };
   await insertMeasurement(m);
+  // Si la notificación falla (por ejemplo, sin permiso), la medición ya quedó guardada.
+  await checkDegradation(m).catch(() => {});
   return m;
 }

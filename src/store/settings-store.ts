@@ -39,3 +39,11 @@ export const useSettingsStore = create<SettingsStore>()(
 );
 
 export const MB = 1024 * 1024;
+
+// Devuelve los ajustes ya leídos de SQLite (la lectura es asíncrona al arrancar la app).
+export async function loadSettings(): Promise<Settings> {
+  if (!useSettingsStore.persist.hasHydrated()) {
+    await useSettingsStore.persist.rehydrate();
+  }
+  return useSettingsStore.getState();
+}

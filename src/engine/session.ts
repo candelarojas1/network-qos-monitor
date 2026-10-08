@@ -1,20 +1,31 @@
 import { createSession, endSession } from '@/db/measurements';
+import { startSessionLocationUpdates, stopSessionLocationUpdates } from '@/geo/location-updates';
 import { useSessionStore } from '@/store/session-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { takeMeasurement } from './measure';
 
+// Hay dos disparadores de medición:
+// - un timer, que funciona con la app en pantalla;
+// - cada actualización de ubicación (onLocationUpdate), que sigue llegando con la pantalla
+//   bloqueada gracias al modo de ubicación en segundo plano.
+// Los dos llaman a tick(), que solo mide si ya pasó el intervalo desde la medición anterior.
+
 let timer: ReturnType<typeof setTimeout> | null = null;
+let lastEnd = 0;
+
+function intervalMs() {
+  return useSettingsStore.getState().sessionIntervalSec * 1000;
+}
 
 function schedule(delayMs: number) {
   if (timer) clearTimeout(timer);
   timer = setTimeout(tick, delayMs);
 }
 
-// Una medición de la sesión. La bandera "measuring" evita que dos mediciones se superpongan.
 async function tick() {
-  timer = null;
   const { sessionId, count, measuring, set } = useSessionStore.getState();
-  if (sessionId === null || measuring) return;
+  // La bandera "measuring" evita que dos mediciones se superpongan.
+  if (sessionId === null || measuring || Date.now() - lastEnd < intervalMs()) return;
 
   const { throughputEvery } = useSettingsStore.getState();
   set({ measuring: true, error: null });
@@ -38,15 +49,26 @@ async function tick() {
   // El intervalo se cuenta desde que termina una medición, así nunca se pisan.
   // Si mientras tanto se inició otra sesión, esa arranca enseguida.
   const current = useSessionStore.getState().sessionId;
-  if (current !== null) {
-    schedule(current === sessionId ? useSettingsStore.getState().sessionIntervalSec * 1000 : 0);
+  if (current === sessionId) {
+    lastEnd = Date.now();
+    schedule(intervalMs());
+  } else if (current !== null) {
+    schedule(0);
   }
+}
+
+// La llama la tarea de ubicación (background/session-location-task.ts) en cada actualización.
+export function onLocationUpdate() {
+  tick();
 }
 
 export async function startSession() {
   if (useSessionStore.getState().sessionId !== null) return;
   const id = await createSession(Date.now());
+  lastEnd = 0;
   useSessionStore.getState().set({ sessionId: id, count: 0, last: null, error: null });
+  const background = await startSessionLocationUpdates();
+  useSessionStore.getState().set({ background });
   schedule(0);
 }
 
@@ -55,6 +77,7 @@ export async function stopSession() {
   if (sessionId === null) return;
   if (timer) clearTimeout(timer);
   timer = null;
-  useSessionStore.getState().set({ sessionId: null });
+  useSessionStore.getState().set({ sessionId: null, background: false });
+  await stopSessionLocationUpdates();
   await endSession(sessionId, Date.now());
 }

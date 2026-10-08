@@ -38,7 +38,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "La app usa tu ubicación para registrar dónde se tomó cada medición de red y dibujar el mapa de cobertura."
+          "locationWhenInUsePermission": "La app usa tu ubicación para registrar dónde se tomó cada medición de red y dibujar el mapa de cobertura.",
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
@@ -49,7 +50,8 @@
           }
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

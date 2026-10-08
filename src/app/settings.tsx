@@ -1,3 +1,4 @@
+import * as BackgroundTask from 'expo-background-task';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +41,20 @@ function validate(d: Draft): string | null {
   const interval = Number(d.sessionIntervalSec);
   if (!Number.isInteger(interval) || interval < 10) return 'El intervalo de sesión debe ser un entero de 10 segundos o más.';
   return null;
+}
+
+// Solo en desarrollo: ejecuta ahora la tarea registrada en BGTaskScheduler.
+// Prueba que el código de la tarea funciona (mide, guarda, notifica);
+// NO demuestra que iOS la ejecute periódicamente.
+async function forceBackgroundTask(): Promise<string> {
+  try {
+    const ok = await BackgroundTask.triggerTaskWorkerForTestingAsync();
+    return ok
+      ? 'Tarea ejecutada. Revisá el Historial (mediciones de segundo plano).'
+      : 'iOS no ejecutó la tarea (en el simulador BGTaskScheduler no está disponible).';
+  } catch (e) {
+    return `No se pudo forzar la tarea: ${e instanceof Error ? e.message : String(e)}`;
+  }
 }
 
 export default function SettingsScreen() {
@@ -122,6 +137,19 @@ export default function SettingsScreen() {
           <Pressable style={styles.secondaryButton} onPress={() => setDraft(toDraft(DEFAULT_SETTINGS))}>
             <ThemedText type="smallBold">Restaurar valores por defecto</ThemedText>
           </Pressable>
+
+          {__DEV__ && (
+            <>
+              <ThemedText type="smallBold">Prueba de la tarea en segundo plano</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Solo en desarrollo. Ejecuta la tarea ahora para comprobar que mide, guarda y notifica. No
+                demuestra la ejecución periódica: esa la decide iOS.
+              </ThemedText>
+              <Pressable style={styles.secondaryButton} onPress={async () => setMessage(await forceBackgroundTask())}>
+                <ThemedText type="smallBold">Forzar tarea en segundo plano</ThemedText>
+              </Pressable>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
