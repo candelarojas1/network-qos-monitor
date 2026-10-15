@@ -18,6 +18,16 @@ Trabajo práctico 5 de Desarrollo de Aplicaciones Móviles (FCyT, 2026). La cons
 | RF-08 Exportar a CSV/JSON | Baja | No implementado (opcional) |
 | RF-09 Filtros por red, fecha y zona | Baja | No implementado (opcional) |
 
+## Entregables
+
+Todo está en el Release `v1.0.0` del repositorio (https://github.com/candelarojas1/network-qos-monitor/releases/tag/v1.0.0):
+
+- **Código fuente:** este repositorio, con historial de commits por etapa.
+- **Build de simulador:** `NetworkQoSMonitor-simulator.zip` (ver "Cómo correrla").
+- **Video demo:** `video-demo.mov` (2 min 9 s, grabado en un iPhone 16 con datos móviles 4G). Muestra la detección de red, la latencia contra los 3 hosts, el test de velocidad, una sesión en curso, el mapa de calor y el Historial con 2 sesiones reales.
+- **Backend de referencia:** carpeta `backend/`, desplegado en `https://network-qos-monitor.onrender.com` (instrucciones en `backend/README.md`).
+- **Documento técnico:** este README.
+
 ## Pantallas
 
 - **Monitor:** iniciar o detener una sesión, ver la red activa, la red celular y el permiso de ubicación, y medir la latencia o la velocidad a mano.
